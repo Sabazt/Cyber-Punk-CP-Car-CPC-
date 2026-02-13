@@ -177,7 +177,7 @@ void moveBackward(int speed) {
   setSpeed(speed);
 }
 
-void moveLeft(int speed) {
+void moveRight(int speed) {
   // Left side moves BACK, Right side moves FORWARD
   digitalWrite(M1A, LOW);  
   digitalWrite(M1B, HIGH); 
@@ -194,7 +194,7 @@ void moveLeft(int speed) {
   setSpeed(speed);
 }
 
-void moveRight(int speed) {
+void moveLeft(int speed) {
   // Left side moves FORWARD, Right side moves BACK
   digitalWrite(M1A, HIGH); 
   digitalWrite(M1B, LOW);
