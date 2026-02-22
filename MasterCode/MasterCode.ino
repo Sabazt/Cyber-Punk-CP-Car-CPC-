@@ -1,28 +1,21 @@
-/*********
-  Rui Santos & Sara Santos - Random Nerd Tutorials
-  Complete project details at https://RandomNerdTutorials.com/esp-now-many-to-one-esp32/
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
-  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*********/
 #include <esp_now.h>
 #include <WiFi.h>
-
-#include "Wire.h"
+#include <Wire.h>
 #include <MPU6050_light.h>
 
 MPU6050 mpu(Wire);
 unsigned long timer = 0;
 
 // REPLACE WITH THE RECEIVER'S MAC Address
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t broadcastAddress[] = {0x88, 0x57, 0x21, 0xB1, 0xE2, 0x2C};
 
 // Structure example to send data
-// Must match the receiver structure
+// Must match the receiver structure exactly
 typedef struct struct_message {
-    int id; // must be unique for each sender board
-    int x_angle;
-    int y_angle;
-    int z_angle;
+  int id; // must be unique for each sender board
+  int x_angle;
+  int y_angle;
+  int z_angle;
 } struct_message;
 
 // Create a struct_message called myData
@@ -31,31 +24,27 @@ struct_message myData;
 // Create peer interface
 esp_now_peer_info_t peerInfo;
 
-// callback when data is sent
+// Callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.print("Last Packet Send Status: ");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
  
 void setup() {
-
   Serial.begin(115200);
-
   Wire.begin();
   
+  // Initialize MPU6050
   byte status = mpu.begin();
   Serial.print(F("MPU6050 status: "));
   Serial.println(status);
-  while(status!=0){ } // stop everything if could not connect to MPU6050
+  while(status != 0){ } // stop everything if could not connect to MPU6050
   
   Serial.println(F("Calculating offsets, do not move MPU6050"));
   delay(1000);
-  // mpu.upsideDownMounting = true; // uncomment this line if the MPU6050 is mounted upside-down
-  mpu.calcOffsets(); // gyro and accelero
+  // mpu.upsideDownMounting = true; // uncomment if the MPU6050 is mounted upside-down
+  mpu.calcOffsets(); // calibrate gyro and accelero
   Serial.println("Done!\n");
-
-  // Init Serial Monitor
-  
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -66,8 +55,7 @@ void setup() {
     return;
   }
 
-  // Once ESPNow is successfully Init, we will register for Send CB to
-  // get the status of Trasnmitted packet
+  // Register send callback to get the status of transmitted packet
   esp_now_register_send_cb(esp_now_send_cb_t(OnDataSent));
   
   // Register peer
@@ -83,30 +71,33 @@ void setup() {
 }
  
 void loop() {
-
+  // mpu.update() MUST run as fast as possible to keep angle calculations accurate
   mpu.update();
 
-  Serial.print("X : ");
-	Serial.print(mpu.getAngleX());
-	Serial.print("\tY : ");
-	Serial.print(mpu.getAngleY());
-	Serial.print("\tZ : ");
-	Serial.println(mpu.getAngleZ());
+  // Non-blocking timer: Send data every 1000ms (1 second)
+  if ((millis() - timer) > 1000) {
+    
+    // Set values to send (casting floats to ints to match your struct)
+    myData.id = 1;
+    myData.x_angle = (int)mpu.getAngleX();
+    myData.y_angle = (int)mpu.getAngleY();
+    myData.z_angle = (int)mpu.getAngleZ();
 
-  // Set values to send
-  myData.id = 1;
-  myData.x_angle = mpu.getAngleX();
-  myData.y_angle = mpu.getAngleY();
-  myData.z_angle = mpu.getAngleZ();
+    // Print to Serial Monitor for debugging
+    Serial.print("X: "); Serial.print(myData.x_angle);
+    Serial.print("\tY: "); Serial.print(myData.y_angle);
+    Serial.print("\tZ: "); Serial.println(myData.z_angle);
 
-  // Send message via ESP-NOW
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
-   
-  if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    // Send message via ESP-NOW
+    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+     
+    if (result == ESP_OK) {
+      Serial.println("Sent with success\n");
+    } else {
+      Serial.println("Error sending the data\n");
+    }
+    
+    // Reset the timer
+    timer = millis();
   }
-  else {
-    Serial.println("Error sending the data");
-  }
-  delay(1000);
 }

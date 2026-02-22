@@ -99,6 +99,30 @@ void setup() {
 }
  
 void loop() {
+
+  // Move Forward if X is greater than 100
+
+  if(myData.x_angle > 75){
+    moveForward(moveSpeed);
+  }
+  else if(myData.x_angle < -75){
+    moveBackward(moveSpeed);
+  }
+  else if(myData.y_angle > 75)
+  {
+    moveLeft(moveSpeed);
+  }
+  else if(myData.y_angle < -75)
+  {
+    moveRight(moveSpeed);
+  }
+  else
+  {
+    stopMotors();
+  }
+  
+
+
   // Acess the  variables for each board
   /*int board1X = boardsStruct[0].x;
   int board1Y = boardsStruct[0].y;
@@ -124,6 +148,7 @@ void loop() {
   delay(2000);
   */
   // 4. Turn Left (Tank Turn) for 1 second
+  /*
   Serial.println("Left");
   moveLeft(moveSpeed);
   delay(2000);
@@ -138,6 +163,7 @@ void loop() {
   
   stopMotors();
   delay(1000);
+  */
 
 }
 
